@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    image: bitnami/zookeeper:latest
+    container_name: zookeeper
+    environment:
+      - ZOO_ENABLE_AUTH=no
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper_data:/bitnami/zookeeper
+
+  kafka:
+    image: bitnami/kafka:latest
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      # Port 9092 is for internal Docker communication
+      - "9092:9092"
+      # Port 29092 is exposed so you can connect from your host machine or external apps
+      - "29092:29092"
+    environment:
+      # ---- General settings ----
+      - KAFKA_BROKER_ID=1
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_ENABLE_KRAFT=no    # Because we are using Zookeeper, disable KRaft
+      - ALLOW_PLAINTEXT_LISTENER=yes
+
+      # ---- Listener configuration ----
+      # We define two listeners:
+      # INTERNAL = used inside the Docker network
+      # EXTERNAL = used from outside the Docker network
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_LISTENERS=INTERNAL://:9092,EXTERNAL://:29092
+      # Advertised listeners must match how clients (inside and outside Docker) see Kafka.
+      - KAFKA_CFG_ADVERTISED_LISTENERS=INTERNAL://kafka:9092,EXTERNAL://localhost:29092
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=INTERNAL
+
+    volumes:
+      - kafka_data:/bitnami/kafka
+
+  kafdrop:
+    image: obsidiandynamics/kafdrop:latest
+    container_name: kafdrop
+    depends_on:
+      - kafka
+    ports:
+      - "9000:9000"
+    environment:
+      # Kafdrop will connect to Kafka using this address (the internal Docker host/port)
+      KAFKA_BROKERCONNECT: "kafka:9092"
+      JVM_OPTS: "-Xms32M -Xmx64M"
+      SERVER_SERVLET_CONTEXTPATH: "/"
+      SERVER_PORT: "9000"
+
+volumes:
+  zookeeper_data:
+  kafka_data:
