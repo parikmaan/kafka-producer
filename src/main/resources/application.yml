@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: Demo
+  data:
+    mongodb:
+      uri: mongodb://root:example@localhost:27017
+      database: myDB
+  kafka:
+    producer:
+      bootstrap-servers: localhost:29092
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    template:
+      default-topic: employee-events
+    bootstrap-servers: localhost:29092
+server:
+  port: 9080
